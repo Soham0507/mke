@@ -1,0 +1,874 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tend · City requests prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Public+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+html,body{margin:0;height:100%}
+body{background:#0B1F3A;background-image:radial-gradient(circle at 85% 10%,rgba(255,199,44,.18),transparent 40%),radial-gradient(circle at 10% 90%,rgba(255,255,255,.06),transparent 45%);display:flex;align-items:center;justify-content:center;font-family:'Public Sans',sans-serif}
+.phone{width:390px;height:844px;border-radius:44px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.45),0 0 0 10px #050E1C,0 0 0 11px #2A4268}
+@media (max-width:500px),(max-height:880px) and (max-width:900px){body{display:block}.phone{width:100vw;height:100vh;height:100dvh;border-radius:0;box-shadow:none}}
+@media (max-height:880px) and (min-width:901px){.phone{transform:scale(calc(100vh / 900px));transform-origin:center}}
+a{color:inherit;text-decoration:none}a:hover{color:inherit}
+button{font:inherit;cursor:pointer;color:inherit}
+button:disabled{cursor:default}
+input,textarea{font:inherit}
+.disp{font-family:'Archivo',sans-serif;font-stretch:118%;letter-spacing:-0.4px}
+@keyframes tdot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+.tdot{width:7px;height:7px;border-radius:4px;background:#0B1F3A;display:inline-block;animation:tdot 1.1s infinite}
+.tdot:nth-child(2){animation-delay:.15s}.tdot:nth-child(3){animation-delay:.3s}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.rise{animation:rise .28s ease-out both}
+*{scrollbar-width:none;-ms-overflow-style:none}
+*::-webkit-scrollbar{display:none;width:0;height:0}
+</style>
+</head>
+<body>
+<div class="phone" id="app"></div>
+<script type="module">
+import { html, render, Component } from 'https://unpkg.com/htm@3.1.1/preact/standalone.module.js';
+
+const NAVY = '#0B1F3A', YEL = '#FFC72C';
+const ICONS = {
+  pothole: 'M4 15c0-2 3.6-3.5 8-3.5s8 1.5 8 3.5-3.6 3.5-8 3.5-8-1.5-8-3.5zM12 4v5M9.5 6.5 12 9l2.5-2.5',
+  light: 'M6 21V5a2 2 0 0 1 2-2h7M11 7a4 4 0 0 1 8 0zM13 11l-1 2M17 11l1 2',
+  signal: 'M8 2h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM12 6.5h.01M12 11h.01M12 15.5h.01',
+  trash: 'M3 6h18l-1.5 14a2 2 0 0 1-2 1.8h-11a2 2 0 0 1-2-1.8zM9 3h6M10 10v7M14 10v7',
+  tree: 'M12 22v-7M12 15c-4 0-7-2.5-7-6a7 7 0 0 1 14 0c0 3.5-3 6-7 6z',
+  graffiti: 'M6 9h8v13H6zM8 9V6h4v3M14 4l6-2M15 7l6 1',
+  water: 'M3 8c2 0 2-2 4.5-2S10 8 12 8s2-2 4.5-2S19 8 21 8M3 14c2 0 2-2 4.5-2s2.5 2 4.5 2 2-2 4.5-2 2.5 2 4.5 2M3 20h18',
+  car: 'M5 17h14v-5l-2-5H7l-2 5zM5 12h14M7.5 17v2M16.5 17v2',
+  scooter: 'M5 18a2 2 0 1 0 0 .01M19 18a2 2 0 1 0 0 .01M5 18h10l3-12h3',
+  leaf: 'M5 19C5 10 10 5 20 4c-1 10-6 15-15 15zM5 19l8-8',
+  sign: 'M12 2l9 9-9 9-9-9zM12 22v-2',
+  rat: 'M4 15a6 4 0 0 0 12 0 6 4 0 0 0-12 0zM16 15c3 0 5 2 5 5M7 11l-1-3',
+  weeds: 'M12 21V9M12 13c-3 0-5-2-6-6 4 0 6 2 6 6zM12 11c3 0 5-2 6-6-4 0-6 2-6 6zM5 21h14',
+  info: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 11v6M12 7.5h.01',
+  calendar: 'M4 5h16v16H4zM4 10h16M8 3v4M16 3v4',
+  people: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6',
+  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6zM9 12l2 2 4-4',
+  bell: 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.9 1.9 0 0 0 3.4 0',
+  brief: 'M3 8h18v12H3zM8 8V5h8v3M3 13h18'
+};
+const CATS = { streets: 'Streets & traffic', trash: 'Trash & recycling', trees: 'Trees & greenery', neighborhood: 'Neighborhood', water: 'Water & sewers', info: 'Help & info' };
+const DEPT = { streets: 'Street Maintenance', trash: 'Sanitation', trees: 'Forestry', neighborhood: 'Neighborhood Services', water: 'Sewer Maintenance' };
+const TYPES = [
+  { id: 'pothole', name: 'Pothole', cat: 'streets', icon: 'pothole', top: true, desc: 'Holes or broken pavement in a City street.', dupe: '2 pothole reports within a block of here',
+    fields: [ { id: 'size', label: 'How big is it?', kind: 'one', opts: ['Smaller than a plate', 'About a tire', 'Bigger than a tire'] },
+              { id: 'where', label: 'Where in the road?', kind: 'one', opts: ['Driving lane', 'Bike lane', 'Crosswalk', 'Alley'] } ] },
+  { id: 'light', name: 'Streetlight out', cat: 'streets', icon: 'light', top: true, desc: 'One or a few lights out on your block.', dupe: '1 report of lights out on this block',
+    fields: [ { id: 'count', label: 'How many lights are out?', kind: 'one', opts: ['1', '2–3', '4 or more'], block: { '4 or more': 'Four or more lights out is an emergency. Call the City so a crew goes out right away.' } },
+              { id: 'ltype', label: 'Which kind of light?', kind: 'one', opts: ['Street light', 'Alley light', 'Pedestrian light'] } ] },
+  { id: 'signal', name: 'Traffic signal', cat: 'streets', icon: 'signal', top: true, dept: 'Traffic Signals', desc: 'Stoplights, arrows and walk / don’t walk signals.',
+    fields: [ { id: 'problem', label: 'What’s wrong with it?', kind: 'one', opts: ['All dark', 'Stuck on one color', 'Flashing', 'Damaged or knocked down', 'Timing feels wrong'], warn: { 'Damaged or knocked down': 'If the pole or signal is in the road, call the City now as well.' } },
+              { id: 'lights', label: 'Which lights?', hint: 'Pick any', kind: 'many', opts: ['Red', 'Yellow', 'Green', 'Arrow', 'Walk / Don’t walk'] },
+              { id: 'corners', label: 'Which corners?', hint: 'Tap the map', kind: 'corners' } ] },
+  { id: 'garbage', name: 'Missed pickup', cat: 'trash', icon: 'trash', top: true, contact: true, desc: 'Garbage or recycling not collected on your day.',
+    fields: [ { id: 'cart', label: 'Which cart was missed?', kind: 'one', opts: ['Garbage', 'Recycling', 'Both'] },
+              { id: 'when', label: 'When was it missed?', kind: 'one', opts: ['Today', 'Yesterday', 'Earlier'] } ] },
+  { id: 'tree', name: 'Tree down', cat: 'trees', icon: 'tree', top: true, desc: 'A City tree or branch has fallen.',
+    fields: [ { id: 'wires', label: 'Is it touching power lines?', kind: 'one', opts: ['No', 'Yes'], block: { 'Yes': 'Stay well away from it and call 911 now. Downed lines can be live.' }, e911: true },
+              { id: 'size', label: 'What came down?', kind: 'one', opts: ['Branch', 'Large limb', 'Whole tree'] },
+              { id: 'blocking', label: 'Is it blocking anything?', hint: 'Pick any', kind: 'many', opts: ['Street', 'Sidewalk', 'Alley', 'Not blocking'] } ] },
+  { id: 'graffiti', name: 'Graffiti', cat: 'neighborhood', icon: 'graffiti', top: true, desc: 'Paint or tags on public or private property.',
+    fields: [ { id: 'on', label: 'Where is it?', kind: 'one', opts: ['Public property', 'Business or home', 'Sign, pole or utility box'] },
+              { id: 'offensive', label: 'Is it offensive or gang-related?', kind: 'one', opts: ['No', 'Yes', 'Not sure'] } ] },
+  { id: 'sewer', name: 'Clogged sewer grate', cat: 'water', icon: 'water', desc: 'Clogged catch basin causing ponding or flooding in a City street.',
+    fields: [ { id: 'depth', label: 'How bad is the water?', kind: 'one', opts: ['Puddle', 'Over the curb', 'Reaching homes'], warn: { 'Reaching homes': 'Water reaching homes is urgent. Call the City as well.' } } ] },
+  { id: 'debris', name: 'Crash debris', cat: 'streets', icon: 'car', desc: 'Glass, parts or fluids left after a vehicle crash.',
+    fields: [ { id: 'what', label: 'What’s left on the road?', hint: 'Pick any', kind: 'many', opts: ['Glass', 'Car parts', 'Fluid spill'] },
+              { id: 'lane', label: 'Is a lane blocked?', kind: 'one', opts: ['No', 'Yes'] } ] },
+  { id: 'sign', name: 'Street sign problem', cat: 'streets', icon: 'sign', desc: 'Damaged, missing or faded signs and pavement markings.',
+    fields: [ { id: 'stype', label: 'Which sign?', kind: 'one', opts: ['Stop sign', 'Yield', 'Street name', 'Crosswalk paint', 'Other'], warn: { 'Stop sign': 'A missing or downed stop sign is urgent. Call the City as well.' } },
+              { id: 'state', label: 'What happened to it?', kind: 'one', opts: ['Missing', 'Knocked down', 'Faded or turned'] } ] },
+  { id: 'scooter', name: 'Scooter problem', cat: 'streets', icon: 'scooter', desc: 'Dockless scooters parked or ridden badly. Sent straight to the operator.',
+    fields: [ { id: 'issue', label: 'What’s the issue?', kind: 'one', opts: ['Blocking sidewalk', 'Knocked over', 'Unsafe riding'] },
+              { id: 'op', label: 'Which company?', kind: 'one', opts: ['Not sure', '[Operator 1]', '[Operator 2]'] } ] },
+  { id: 'leaves', name: 'Bagged leaf pickup', cat: 'trash', icon: 'leaf', contact: true, desc: 'No request needed for loose leaves. Request pickup for bagged leaves.',
+    fields: [ { id: 'bags', label: 'How many bags?', kind: 'one', opts: ['1–5', '6–10', 'More than 10'] } ] },
+  { id: 'weeds', name: 'Tall grass & weeds', cat: 'trees', icon: 'weeds', desc: 'Overgrown lots, or plants blocking the sidewalk, street or alley.',
+    fields: [ { id: 'where', label: 'Where is it overgrown?', kind: 'one', opts: ['Vacant lot', 'Boulevard', 'Blocking sidewalk', 'Private yard'] } ] },
+  { id: 'planttree', name: 'Plant a City tree', cat: 'trees', icon: 'tree', contact: true, desc: 'Request a new City tree, or one to replace a removed tree.',
+    fields: [ { id: 'kind', label: 'What do you need?', kind: 'one', opts: ['New tree', 'Replace a removed tree'] } ] },
+  { id: 'rats', name: 'Rats', cat: 'neighborhood', icon: 'rat', contact: true, private: true, desc: 'Rat activity or harborage on private property.',
+    fields: [ { id: 'seen', label: 'What did you see?', hint: 'Pick any', kind: 'many', opts: ['Rats', 'Burrows', 'Droppings', 'Garbage left out'] } ] },
+  { id: 'vehicle', name: 'Abandoned vehicle', cat: 'neighborhood', icon: 'car', contact: true, desc: 'Vehicle illegally parked or abandoned on private property.',
+    fields: [ { id: 'cond', label: 'What does it look like?', hint: 'Pick any', kind: 'many', opts: ['Flat tires', 'No plates', 'Damaged', 'Hasn’t moved in weeks'] } ] },
+  { id: 'i-schedule', info: true, name: 'Garbage & recycling schedule', cat: 'info', icon: 'calendar', desc: 'Find your next collection date.', long: 'Enter your address to see your garbage and recycling days, holiday changes and seasonal pickups.', cta: 'Look up my schedule' },
+  { id: 'i-outreach', info: true, name: 'Street outreach', cat: 'info', icon: 'people', desc: 'Report a person sleeping outdoors to the outreach partner.', long: 'An outreach team will check on the person and offer shelter and services. If someone is in danger, call 911.', cta: 'Contact outreach' },
+  { id: 'i-tips', info: true, name: 'Report crime anonymously', cat: 'info', icon: 'shield', desc: 'Tip lines with cash rewards for information.', long: 'Tips go to the crime tip line, not the City repair queue. You stay anonymous and may be eligible for a reward.', cta: 'Open the tip line' },
+  { id: 'i-notify', info: true, name: 'E‑Notify alerts', cat: 'info', icon: 'bell', desc: 'Email and text notices from the City.', long: 'Sign up for alerts about snow emergencies, collection changes, meetings and news for your area.', cta: 'Sign up for alerts' },
+  { id: 'i-jobs', info: true, name: 'City jobs', cat: 'info', icon: 'brief', desc: 'Work for the City. Apply online.', long: 'Browse open positions and apply through the City’s online employment center.', cta: 'See open jobs' },
+  { id: 'i-zoning', info: true, name: 'Zoning appeals testimony', cat: 'info', icon: 'info', desc: 'Send written comments on pending zoning appeals.', long: 'Email the Board of Zoning Appeals your comments on an appeal before its hearing.', cta: 'Email the board' }
+];
+const BY_ID = Object.fromEntries(TYPES.map(t => [t.id, t]));
+const ADDRESSES = [['Main St & 5th Ave', 'From your location'], ['1200 Elm St', 'Typed address'], ['Oak Ave & River Rd', 'Pin dropped on map']];
+const CORNER_POS = { nw: 'left:14px;top:14px', ne: 'right:14px;top:14px', sw: 'left:14px;bottom:14px', se: 'right:14px;bottom:14px' };
+const CORNER_NAME = { nw: 'NW', ne: 'NE', sw: 'SW', se: 'SE' };
+const STATUS = ['Submitted', 'Routed', 'Crew assigned', 'Fixed'];
+const SHORT = { size: 'Size', where: 'Position', count: 'Lights out', ltype: 'Type', problem: 'Problem', lights: 'Lights', corners: 'Corners', cart: 'Cart', when: 'Missed', wires: 'Power lines', blocking: 'Blocking', on: 'On', offensive: 'Offensive', depth: 'Water', what: 'Debris', lane: 'Lane blocked', stype: 'Sign', state: 'State', issue: 'Issue', op: 'Company', bags: 'Bags', kind: 'Need', seen: 'Seen', cond: 'Condition' };
+const deptOf = (t) => t.dept || DEPT[t.cat];
+
+const EMERGENCY = /fire|smoke|gas leak|smell(s|ing)? (of )?gas|bleed|injur|hurt|unconscious|not breathing|shoot|shot|\bgun\b|stab|live wire|wires? down|power ?lines? down/;
+const RULES = [
+  [/(when|what day|schedule|next).*(garbage|trash|recycl|pickup|collection)|(garbage|trash|recycl).*(day|schedule)/, 'i-schedule'],
+  [/sign ?up|alert|notif|e-?notify/, 'i-notify'],
+  [/\bjobs?\b|hiring|employ|work for the city/, 'i-jobs'],
+  [/crime|\btips?\b|suspicious|drug deal/, 'i-tips'],
+  [/homeless|sleeping (outside|outdoors|on)|unhoused|encampment/, 'i-outreach'],
+  [/zoning|boza|appeal/, 'i-zoning'],
+  [/traffic ?(light|signal)|stop ?light|\bsignal|walk sign|red light|green light|yellow light|crosswalk light/, 'signal'],
+  [/street ?lights?|lamp|alley light|light.*\b(out|dark|broken|off|flicker)|dark (street|alley|block)/, 'light'],
+  [/pot ?holes?|hole in|crack|pavement|road.*(damage|broken)/, 'pothole'],
+  [/plant (a )?(new )?tree|new tree|replace.*tree/, 'planttree'],
+  [/lea(f|ves)/, 'leaves'],
+  [/garbage|trash|recycl|pick ?up|\bcart|\bbins?\b|collection|missed/, 'garbage'],
+  [/tree|branch|limb/, 'tree'],
+  [/weeds?|tall grass|overgrown|grass/, 'weeds'],
+  [/graffiti|tag(ged|ging|s)?\b|spray ?paint|vandal/, 'graffiti'],
+  [/sewer|drain|grate|flood|ponding|standing water|catch basin/, 'sewer'],
+  [/debris|glass|crash|accident|car parts/, 'debris'],
+  [/scooter|\blime\b|\bbird\b/, 'scooter'],
+  [/\brats?\b|rodent|\bmice\b|mouse/, 'rats'],
+  [/abandon|junk car|car.*(parked|sitting|hasn)|vehicle/, 'vehicle'],
+  [/\bsigns?\b|stop sign|yield|street name|pavement marking|crosswalk/, 'sign']
+];
+const classify = (text) => {
+  const s = text.toLowerCase();
+  if (EMERGENCY.test(s)) return { kind: 'emergency' };
+  for (const [re, id] of RULES) if (re.test(s)) return { kind: BY_ID[id].info ? 'info' : 'type', id };
+  return { kind: 'unknown' };
+};
+const GREETING = [
+  { from: 'agent', kind: 'text', text: 'Hi, I’m the City Agent. Tell me what’s wrong in your own words. I’ll work out which crew handles it, ask a couple of quick questions, and file it for you.' },
+  { from: 'agent', kind: 'choices', step: 'suggest', text: 'Or start with one of these:', opts: ['The streetlight on my block is out', 'My recycling wasn’t picked up', 'Big pothole on my street', 'When is my garbage day?'] }
+];
+
+const Icon = (d, stroke, size = 22, sw = 2) => html`<svg width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke=${stroke} stroke-width=${sw} stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d=${d} /></svg>`;
+const SPARK = 'M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z';
+const BACK = 'm15 18-6-6 6-6';
+const PHONE = 'M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2';
+const CHECK = 'm5 12 5 5 9-10';
+
+class App extends Component {
+  constructor(p) {
+    super(p);
+    this._mid = 0;
+    this.state = {
+      screen: 'home', from: 'home', typeId: null, q: '', cat: 'all', answers: {}, note: '', photo: false,
+      name: '', phone: '', isPublic: true, addr: 0, curId: 'R-1042', toast: '', unread: true, seq: 1043,
+      requests: [ { id: 'R-1042', typeId: 'signal', summary: 'All dark · NE, SW corners', where: 'Main St & 5th Ave', status: 2, followed: true, times: ['Tue 9:41 PM', 'Tue 9:42 PM', 'Today 8:15 AM'] } ],
+      msgs: this.stamp(GREETING), typing: false, draft: '', flow: null
+    };
+    this.chatRef = (el) => { this._chat = el; };
+  }
+  stamp(list) { return list.map(m => ({ ...m, id: ++this._mid })); }
+  componentDidUpdate() { if (this._chat) this._chat.scrollTop = this._chat.scrollHeight; }
+  componentWillUnmount() { clearTimeout(this._t); (this._timers || []).forEach(clearTimeout); }
+  later(fn, ms) { this._timers = this._timers || []; this._timers.push(setTimeout(fn, ms)); }
+  now() { return 'Today ' + new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+  flash(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: '' }), 2600); }
+
+  createRequest(t, summary, addr) {
+    const id = 'R-' + this.state.seq;
+    const req = { id, typeId: t.id, summary, where: ADDRESSES[addr][0], status: 0, followed: true, times: [this.now()] };
+    this.setState(s => ({ requests: [req, ...s.requests], seq: s.seq + 1, curId: id }));
+    this.later(() => this.setState(s => ({ unread: true, requests: s.requests.map(r => r.id === id && r.status === 0 ? { ...r, status: 1, times: [...r.times, this.now()] } : r) })), 3500);
+    return id;
+  }
+  openType(t) {
+    if (t.info) { this.setState({ screen: 'info', typeId: t.id }); return; }
+    this.setState({ from: this.state.screen, screen: 'form', typeId: t.id, answers: {}, note: '', photo: false, isPublic: !t.private });
+  }
+
+  say(list, extra) {
+    this.setState({ typing: true });
+    this.later(() => this.setState(s => ({ typing: false, msgs: [...s.msgs, ...this.stamp(list)], ...(extra || {}) })), 650);
+  }
+  user(text, closeId) {
+    this.setState(s => ({ msgs: [...s.msgs.map(m => m.id === closeId ? { ...m, closed: true } : m), ...this.stamp([{ from: 'user', kind: 'text', text }])] }));
+  }
+  questionFor(flow) {
+    const t = BY_ID[flow.typeId];
+    if (flow.stage === 'fields') {
+      const f = t.fields[flow.fi];
+      if (f.kind === 'corners') return [{ from: 'agent', kind: 'choices', step: 'field', multi: true, text: 'Which corners have the broken signal? Pick all that apply, then tap Done.', opts: ['NE', 'NW', 'SE', 'SW', 'Done'] }];
+      return [{ from: 'agent', kind: 'choices', step: 'field', multi: f.kind === 'many', text: f.label + (f.kind === 'many' ? ' Pick any, then tap Done.' : ''), opts: f.kind === 'many' ? [...f.opts, 'Done'] : f.opts }];
+    }
+    if (flow.stage === 'loc') return [{ from: 'agent', kind: 'choices', step: 'loc', text: 'Where is it? I have ' + ADDRESSES[this.state.addr][0] + ' (' + ADDRESSES[this.state.addr][1].toLowerCase() + ').', opts: ['Yes, right here', 'Use a different spot'] }];
+    if (flow.stage === 'contact') return [{ from: 'agent', kind: 'choices', step: 'contact', text: 'This one needs a name and phone so the crew can reach you. Use the ones saved on your profile?', opts: ['Use my profile', 'I’ll type them in'] }];
+    if (flow.stage === 'confirm') {
+      const lines = [{ k: 'Request', v: t.name }, { k: 'Crew', v: deptOf(t) }];
+      t.fields.forEach(f => { const v = flow.answers[f.id]; if (v) lines.push({ k: SHORT[f.id] || f.id, v: Array.isArray(v) ? v.join(', ') : v }); });
+      lines.push({ k: 'Where', v: ADDRESSES[this.state.addr][0] });
+      return [{ from: 'agent', kind: 'summary', step: 'confirm', lines, opts: ['File it', 'Edit in form'] }];
+    }
+    return [];
+  }
+  advance(flow, pre) {
+    const t = BY_ID[flow.typeId];
+    let next = { ...flow, multi: [] };
+    if (next.stage === 'fields') { next.fi++; if (next.fi >= t.fields.length) next.stage = 'loc'; }
+    else if (next.stage === 'loc') next.stage = t.contact ? 'contact' : 'confirm';
+    else if (next.stage === 'contact') next.stage = 'confirm';
+    this.say([...(pre || []), ...this.questionFor(next)], { flow: next });
+  }
+  startFlow(t) {
+    const flow = { typeId: t.id, fi: 0, stage: 'fields', answers: {}, multi: [] };
+    this.say([
+      { from: 'agent', kind: 'text', text: 'Got it. That’s a ' + t.name.toLowerCase() + ' report, which ' + deptOf(t) + ' handles. I’ll send it straight to them.' },
+      { from: 'agent', kind: 'route', typeId: t.id },
+      ...this.questionFor(flow)
+    ], { flow });
+  }
+  respond(text) {
+    const r = classify(text);
+    if (r.kind === 'emergency') {
+      this.say([{ from: 'agent', kind: 'emergency', title: 'This sounds like an emergency', text: 'If anyone is hurt or in danger, or there’s fire, gas or a downed power line, call 911 now. Don’t wait on an app.', cta: 'Call 911', href: 'tel:911' }], { flow: null });
+    } else if (r.kind === 'info') {
+      this.say([{ from: 'agent', kind: 'text', text: 'That one isn’t a repair request, so there’s nothing to file. Here’s where to go:' }, { from: 'agent', kind: 'info', typeId: r.id }], { flow: null });
+    } else if (r.kind === 'type') {
+      this.startFlow(BY_ID[r.id]);
+    } else {
+      this.say([{ from: 'agent', kind: 'choices', step: 'unknown', text: 'I couldn’t match that to a service yet. Is it one of these?', opts: ['Pothole', 'Streetlight out', 'Missed pickup', 'Tree down', 'Something else'] }], { flow: null });
+    }
+  }
+  activeMsg() { const ms = this.state.msgs; for (let i = ms.length - 1; i >= 0; i--) { if (ms[i].opts) return ms[i].closed ? null : ms[i]; } return null; }
+  send(raw) {
+    const text = (raw || '').trim();
+    if (!text || this.state.typing) return;
+    const act = this.activeMsg();
+    if (act && act.step !== 'suggest') {
+      const hit = act.opts.find(o => o.toLowerCase() === text.toLowerCase());
+      if (hit) { this.setState({ draft: '' }); this.choose(act, hit); return; }
+    }
+    this.setState({ draft: '' });
+    this.user(text, act ? act.id : null);
+    this.respond(text);
+  }
+  choose(m, opt) {
+    if (m.closed || this.state.typing) return;
+    const flow = this.state.flow;
+    if (m.step === 'suggest') { this.user(opt, m.id); this.respond(opt); return; }
+    if (m.step === 'unknown') {
+      this.user(opt, m.id);
+      if (opt === 'Something else') { this.say([{ from: 'agent', kind: 'emergency', title: 'Let’s get you a person', text: 'A City agent can file anything over the phone, and help with addresses or existing requests.', cta: 'Call the City', href: 'tel:0000000000' }]); return; }
+      this.startFlow(TYPES.find(t => t.name === opt)); return;
+    }
+    if (!flow) return;
+    const t = BY_ID[flow.typeId];
+    if (m.step === 'field') {
+      const f = t.fields[flow.fi];
+      if (m.multi && opt !== 'Done') {
+        this.setState({ flow: { ...flow, multi: flow.multi.includes(opt) ? flow.multi.filter(x => x !== opt) : [...flow.multi, opt] } });
+        return;
+      }
+      let val = opt;
+      if (m.multi) { if (!flow.multi.length) return; val = flow.multi; this.user(flow.multi.join(', '), m.id); }
+      else this.user(opt, m.id);
+      const answers = { ...flow.answers, [f.id]: val };
+      if (!m.multi && f.block && f.block[opt]) {
+        this.say([{ from: 'agent', kind: 'emergency', title: f.e911 ? 'Call 911 now' : 'Don’t file this one, call', text: f.block[opt], cta: f.e911 ? 'Call 911' : 'Call the City', href: f.e911 ? 'tel:911' : 'tel:0000000000' }], { flow: null });
+        return;
+      }
+      const pre = (!m.multi && f.warn && f.warn[opt]) ? [{ from: 'agent', kind: 'text', text: 'Heads up: ' + f.warn[opt] }] : [];
+      this.advance({ ...flow, answers }, pre);
+      return;
+    }
+    if (m.step === 'loc') {
+      this.user(opt, m.id);
+      if (opt === 'Use a different spot') {
+        const addr = (this.state.addr + 1) % ADDRESSES.length;
+        this.setState({ addr });
+        this.say([{ from: 'agent', kind: 'choices', step: 'loc', text: 'How about ' + ADDRESSES[addr][0] + '? In the full app you’d drag a pin or type an address.', opts: ['Yes, right here', 'Use a different spot'] }]);
+        return;
+      }
+      this.advance(flow); return;
+    }
+    if (m.step === 'contact') {
+      this.user(opt, m.id);
+      if (opt === 'Use my profile') { this.setState({ name: '[Your name]', phone: '[Your phone]' }); this.advance(flow); }
+      else this.toForm(flow);
+      return;
+    }
+    if (m.step === 'confirm') {
+      this.user(opt, m.id);
+      if (opt === 'Edit in form') { this.toForm(flow); return; }
+      const vals = t.fields.map(f => flow.answers[f.id]).filter(Boolean).map(v => Array.isArray(v) ? v.join(', ') : v);
+      const id = this.createRequest(t, vals.slice(0, 2).join(' · ') || 'Filed by City Agent', this.state.addr);
+      this.say([{ from: 'agent', kind: 'filed', reqId: id, typeId: t.id }], { flow: null });
+    }
+  }
+  toForm(flow) {
+    const t = BY_ID[flow.typeId];
+    const answers = {};
+    t.fields.forEach(f => { const v = flow.answers[f.id]; if (v) answers[f.id] = f.kind === 'corners' ? v.map(x => x.toLowerCase()) : v; });
+    this.setState({ flow: null, from: 'agent', screen: 'form', typeId: t.id, answers, note: '', photo: false, isPublic: !t.private });
+  }
+
+  vals() {
+    const s = this.state;
+    const chip = (on) => 'display:flex;align-items:center;gap:6px;min-height:44px;padding:0 15px;border-radius:999px;font-size:14px;font-weight:700;' + (on ? 'border:2px solid ' + NAVY + ';background:' + YEL + ';color:' + NAVY : 'border:1px solid #D0D7E0;background:#fff;color:' + NAVY);
+    const go = (screen, extra) => () => this.setState({ screen, ...(extra || {}) });
+    const pillFor = (st) => 'font-size:12px;font-weight:800;padding:5px 10px;border-radius:999px;white-space:nowrap;' + (st === 3 ? 'background:#DDF3E5;color:#14532D' : st === 0 ? 'background:#E3E8EE;color:#33404F' : 'background:' + YEL + ';color:' + NAVY);
+    const card = (r) => {
+      const t = BY_ID[r.typeId];
+      return { ...r, title: t.name, statusLabel: STATUS[r.status], pill: pillFor(r.status),
+        bars: [0, 1, 2, 3].map(i => ({ style: 'display:block;height:6px;border-radius:3px;background:' + (i <= r.status ? YEL : '#2A4268'), style2: 'display:block;height:6px;border-radius:3px;background:' + (i <= r.status ? NAVY : '#E3E8EE') })),
+        open: () => this.setState({ screen: 'track', curId: r.id, unread: false }) };
+    };
+
+    const act = this.activeMsg();
+    const flow = s.flow;
+    const msgs = s.msgs.map(m => {
+      const isUser = m.from === 'user';
+      const o = { ...m, rowStyle: 'display:flex;' + (isUser ? 'justify-content:flex-end' : 'justify-content:flex-start'),
+        bubble: 'max-width:290px;padding:12px 15px;font-size:15px;line-height:1.45;' + (isUser ? 'background:' + NAVY + ';color:#fff;border-radius:20px 20px 6px 20px' : 'background:#fff;color:' + NAVY + ';border-radius:20px 20px 20px 6px;box-shadow:0 1px 2px rgba(11,31,58,0.06)') };
+      if (m.typeId && BY_ID[m.typeId]) { const t = BY_ID[m.typeId]; Object.assign(o, { icon: ICONS[t.icon], dept: deptOf(t), typeName: t.name, qcount: (t.fields || []).length + 1, name: t.name, long: t.long, cta: m.kind === 'info' ? t.cta : m.cta }); }
+      if (m.kind === 'filed') o.track = () => this.setState({ screen: 'track', curId: m.reqId, unread: false });
+      if (m.opts) {
+        const live = act && act.id === m.id;
+        o.optList = m.opts.map(label => {
+          const on = live && m.multi && flow && flow.multi.includes(label);
+          const isPrimary = label === 'File it' || label === 'Done';
+          let style = chip(on);
+          if (isPrimary) style = 'display:flex;align-items:center;min-height:44px;padding:0 18px;border-radius:999px;font-size:14px;font-weight:800;border:0;background:' + NAVY + ';color:#fff';
+          if (!live) style += ';opacity:0.45';
+          return { label, on: !!on, disabled: !live, style, pick: () => this.choose(m, label) };
+        });
+      }
+      return o;
+    });
+
+    const q = s.q.trim().toLowerCase();
+    const results = TYPES.filter(t => (s.cat === 'all' || t.cat === s.cat) && (!q || (t.name + ' ' + t.desc + ' ' + CATS[t.cat]).toLowerCase().includes(q)))
+      .map(t => ({ name: t.name, desc: t.desc, icon: ICONS[t.icon], ink: t.info ? '#fff' : NAVY,
+        tile: 'width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:' + (t.info ? NAVY : '#FFF1C7'),
+        open: () => this.openType(t) }));
+    const cats = [['all', 'All']].concat(Object.entries(CATS)).map(([id, label]) => {
+      const on = s.cat === id;
+      return { label, on, pick: () => this.setState({ cat: id }), style: 'flex-shrink:0;white-space:nowrap;min-height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:700;' + (on ? 'border:0;background:' + YEL + ';color:' + NAVY : 'border:1px solid #2E4A75;background:#13294B;color:#fff') };
+    });
+
+    const t = s.typeId ? BY_ID[s.typeId] : null;
+    let form = { fields: [], pbars: [] }, blocked = false, blockLabel = '', blockHref = 'tel:0000000000', answered = 0, total = 0, parts = [];
+    if (t && !t.info) {
+      const fields = t.fields.map(f => {
+        const val = s.answers[f.id]; total++;
+        const has = Array.isArray(val) ? val.length > 0 : !!val;
+        if (has) { answered++; parts.push(Array.isArray(val) ? val.map(v => CORNER_NAME[v] || v).join(', ') + (f.kind === 'corners' ? ' corners' : '') : val); }
+        let warn = '', isBlock = false;
+        if (f.block && val && f.block[val]) { warn = f.block[val]; isBlock = true; blocked = true; blockLabel = f.e911 ? 'Call 911' : 'Call the City now'; if (f.e911) blockHref = 'tel:911'; }
+        else if (f.warn && val && f.warn[val]) warn = f.warn[val];
+        const out = { label: f.label, hint: f.hint || '', isCorners: f.kind === 'corners', warn,
+          warnStyle: 'font-size:13px;line-height:1.45;padding:12px 14px;border-radius:14px;font-weight:700;' + (isBlock ? 'background:#FEE4E2;color:#7A1A12' : 'background:#FFF1C7;color:#4A3200') };
+        if (f.kind === 'corners') {
+          const cur = val || [];
+          out.corners = ['nw', 'ne', 'sw', 'se'].map(id => {
+            const on = cur.includes(id);
+            return { on, label: CORNER_NAME[id] + ' corner', style: 'position:absolute;' + CORNER_POS[id] + ';width:32px;height:32px;border-radius:16px;padding:0;border:3px solid ' + NAVY + ';background:' + (on ? YEL : '#fff') + ';box-shadow:0 2px 4px rgba(0,0,0,.2)',
+              pick: () => this.setState(st => { const a = st.answers[f.id] || []; return { answers: { ...st.answers, [f.id]: a.includes(id) ? a.filter(x => x !== id) : [...a, id] } }; }) };
+          });
+          out.cornerSummary = cur.length ? 'Selected: ' + cur.map(c => CORNER_NAME[c]).join(', ') + '. Direction of travel is worked out from these.' : 'Tap each corner with a broken signal. We work out the direction of travel for you.';
+        } else {
+          out.opts = f.opts.map(o => {
+            const on = f.kind === 'many' ? (val || []).includes(o) : val === o;
+            return { label: o, on, style: chip(on), pick: () => this.setState(st => {
+              if (f.kind === 'many') { const a = st.answers[f.id] || []; return { answers: { ...st.answers, [f.id]: a.includes(o) ? a.filter(x => x !== o) : [...a, o] } }; }
+              return { answers: { ...st.answers, [f.id]: st.answers[f.id] === o ? undefined : o } };
+            }) };
+          });
+        }
+        return out;
+      });
+      const contactOk = !t.contact || (s.name.trim() && s.phone.trim());
+      const steps = total + (t.contact ? 1 : 0), done = answered + (t.contact && contactOk ? 1 : 0);
+      form = { name: t.name, desc: t.desc, cat: CATS[t.cat], fields, contact: !!t.contact, canPublic: !t.private, privateOnly: !!t.private, dupeText: t.dupe || '',
+        pbars: [0, 1, 2, 3].map(i => ({ style: 'display:block;height:5px;border-radius:3px;background:' + (i < Math.round(done / steps * 4) ? YEL : '#2A4268') })) };
+      form.ready = answered === total && contactOk && !blocked;
+      form.progress = answered < total ? (total - answered) + ' question' + (total - answered > 1 ? 's' : '') + ' left' : (!contactOk ? 'Add your name and phone to submit' : 'Ready to send to ' + deptOf(t));
+    }
+
+    const curReq = s.requests.find(r => r.id === s.curId) || s.requests[0];
+    let cur = {};
+    if (curReq) {
+      const ct = BY_ID[curReq.typeId], dept = deptOf(ct);
+      const labels = ['Submitted', 'Routed to ' + dept, 'Crew assigned', 'Fixed'];
+      const heads = ['We got your report', 'Sent to ' + dept, 'A crew is on it', 'Fixed. Thanks for reporting'];
+      cur = { id: curReq.id, title: ct.name, summary: curReq.summary, where: curReq.where,
+        kicker: curReq.status === 3 ? 'Closed' : 'In progress · ' + STATUS[curReq.status], headline: heads[curReq.status], followed: curReq.followed,
+        steps: labels.map((l, i) => {
+          const done = i < curReq.status || curReq.status === 3, now = i === curReq.status && curReq.status !== 3;
+          return { t: l, d: curReq.times[i] || (i === 3 ? 'You’ll be notified' : 'Waiting'), line: i < 3,
+            dot: 'width:20px;height:20px;border-radius:10px;margin-top:1px;box-sizing:border-box;' + (done ? 'background:' + NAVY + ';border:5px solid ' + YEL : now ? 'background:' + YEL + ';border:3px solid ' + NAVY : 'background:#fff;border:2px solid #C2CAD3'),
+            lineStyle: 'width:3px;flex-grow:1;min-height:20px;border-radius:2px;background:' + (i < curReq.status ? NAVY : '#E3E8EE'),
+            titleStyle: 'font-size:15px;font-weight:' + (done || now ? '800;color:' + NAVY : '600;color:#6A7685') };
+        }),
+        followLabel: curReq.followed ? 'Following' : 'Follow updates',
+        followStyle: 'flex:1 1 0;height:52px;border-radius:16px;font-size:15px;font-weight:800;' + (curReq.followed ? 'border:2px solid ' + NAVY + ';background:#fff;color:' + NAVY : 'border:0;background:' + YEL + ';color:' + NAVY),
+        toggleFollow: () => this.setState(st => ({ requests: st.requests.map(r => r.id === curReq.id ? { ...r, followed: !r.followed } : r) })),
+        canAdvance: curReq.status < 3,
+        advance: () => { this.setState(st => ({ requests: st.requests.map(r => r.id === curReq.id ? { ...r, status: Math.min(3, r.status + 1), times: [...r.times, this.now()] } : r) })); this.flash(curReq.status === 2 ? 'Marked fixed by the crew' : 'Status updated'); } };
+    }
+
+    const tabStyle = (on) => 'display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;min-width:56px;min-height:44px;justify-content:center;border:0;background:transparent;padding:0;font-weight:' + (on ? '800;color:' + NAVY : '600;color:#6A7685');
+    const sc = s.screen;
+    const latest = s.requests[0] ? card(s.requests[0]) : null;
+    const askAgent = (text) => () => this.setState({ screen: 'agent' }, () => this.send(text));
+    return {
+      sc, address: ADDRESSES[s.addr][0], addressNote: ADDRESSES[s.addr][1],
+      showTabs: ['home', 'services', 'list', 'info'].includes(sc),
+      tab: { home: tabStyle(sc === 'home'), services: tabStyle(sc === 'services' || sc === 'info'), list: tabStyle(sc === 'list'), call: tabStyle(false) },
+      goHome: go('home'), goServices: go('services', { q: '', cat: 'all' }), goList: go('list', { unread: false }),
+      goBackFromForm: go(s.from === 'agent' ? 'agent' : s.from === 'home' ? 'home' : 'services'),
+      openAgent: go('agent'),
+      heroPrompts: ['Streetlight’s out', 'Missed my recycling', 'When’s garbage day?', 'Tree branch down'].map(text => ({ text, go: askAgent(text) })),
+      openGarbageInfo: () => this.openType(BY_ID['i-schedule']), openLeaves: () => this.openType(BY_ID['leaves']),
+      topTypes: TYPES.filter(x => x.top).map(x => ({ name: x.name, icon: ICONS[x.icon], open: () => this.openType(x) })),
+      typeCount: TYPES.filter(x => !x.info).length,
+      latest, hasUnread: s.unread,
+      msgs, typing: s.typing, draft: s.draft,
+      onDraft: (e) => this.setState({ draft: e.target.value }),
+      onDraftKey: (e) => { if (e.key === 'Enter') { e.preventDefault(); this.send(this.state.draft); } },
+      sendDraft: () => this.send(this.state.draft),
+      resetChat: () => this.setState({ msgs: this.stamp(GREETING), flow: null, typing: false, draft: '' }),
+      q: s.q, onQ: (e) => this.setState({ q: e.target.value }), clearQ: () => this.setState({ q: '' }),
+      askAgentQ: askAgent(s.q), cats, results,
+      resultLabel: results.length + (results.length === 1 ? ' result' : ' results') + (s.cat !== 'all' ? ' in ' + CATS[s.cat] : ''),
+      lightTip: q.length > 2 && 'streetlight'.includes(q),
+      form, blocked, blockLabel, blockHref, progressText: form.progress || '', notReady: !form.ready,
+      submitStyle: 'width:100%;height:56px;border-radius:18px;border:0;font-size:16px;font-weight:900;' + (form.ready ? 'background:' + YEL + ';color:' + NAVY : 'background:#E3E8EE;color:#6A7685'),
+      submit: () => { if (!form.ready) return; this.createRequest(t, parts.slice(0, 2).join(' · ') || 'Details on file', s.addr); this.setState({ screen: 'track' }); this.flash('Report sent. Updates will land here.'); },
+      followDupe: () => {
+        const id = 'R-' + s.seq;
+        this.setState(st => ({ seq: st.seq + 1, curId: id, screen: 'track', requests: [{ id, typeId: t.id, summary: 'Following a neighbor’s report', where: ADDRESSES[st.addr][0], status: 1, followed: true, times: ['Yesterday 6:02 PM', 'Yesterday 6:03 PM'] }, ...st.requests] }));
+        this.flash('You’re following this report');
+      },
+      cycleAddress: () => this.setState(st => ({ addr: (st.addr + 1) % ADDRESSES.length })),
+      note: s.note, onNote: (e) => this.setState({ note: e.target.value.slice(0, 600) }),
+      photoLabel: s.photo ? 'Photo added · tap to remove' : 'Add a photo (optional)',
+      photoStyle: 'display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:16px;font-size:15px;font-weight:700;color:' + NAVY + ';' + (s.photo ? 'border:2px solid ' + NAVY + ';background:' + YEL : 'border:2px dashed #A9B4C0;background:transparent'),
+      togglePhoto: () => this.setState(st => ({ photo: !st.photo })),
+      name: s.name, phone: s.phone, onName: (e) => this.setState({ name: e.target.value }), onPhone: (e) => this.setState({ phone: e.target.value }),
+      isPublic: s.isPublic, togglePublic: () => this.setState(st => ({ isPublic: !st.isPublic })),
+      switchTrack: 'width:50px;height:30px;border-radius:15px;flex-shrink:0;position:relative;background:' + (s.isPublic ? NAVY : '#C2CAD3'),
+      switchKnob: 'position:absolute;top:4px;width:22px;height:22px;border-radius:11px;background:' + (s.isPublic ? YEL : '#fff') + ';left:' + (s.isPublic ? '24px' : '4px'),
+      info: t && t.info ? { name: t.name, long: t.long, cta: t.cta, icon: ICONS[t.icon] } : {},
+      cur, reqCards: s.requests.map(card), reqCountLabel: s.requests.length + (s.requests.length === 1 ? ' request' : ' requests') + ' · updates arrive here',
+      toast: s.toast
+    };
+  }
+
+  backBtn(onClick, label, stroke = '#fff') {
+    return html`<button onClick=${onClick} aria-label=${label} style="width:44px;height:44px;border:0;background:transparent;display:flex;align-items:center;margin-left:-6px;padding:0 6px">${Icon(BACK, stroke, 22, 2.2)}</button>`;
+  }
+
+  home(v) {
+    return html`
+    <div style="flex-grow:1;overflow-y:auto;display:flex;flex-direction:column">
+      <div style="background:#0B1F3A;color:#fff;padding:18px 20px 22px;border-radius:0 0 32px 32px;position:relative;overflow:hidden;display:flex;flex-direction:column;gap:18px;flex-shrink:0">
+        <div aria-hidden="true" style="position:absolute;right:-70px;top:-70px;width:200px;height:200px;border-radius:100px;border:26px solid #FFC72C;opacity:0.16"></div>
+        <div aria-hidden="true" style="position:absolute;right:40px;top:96px;width:14px;height:14px;border-radius:7px;background:#FFC72C"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;position:relative">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:38px;height:38px;border-radius:12px;background:#FFC72C;display:flex;align-items:center;justify-content:center">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0B1F3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>
+            </div>
+            <div>
+              <div class="disp" style="font-weight:900;font-size:21px;line-height:1">TEND</div>
+              <div style="font-size:12px;color:#B9C4D4;margin-top:3px;display:flex;align-items:center;gap:4px">${Icon('M3 11 21 3l-8 18-2-8z', '#FFC72C', 12, 2.6)}${v.address}</div>
+            </div>
+          </div>
+          <button onClick=${v.goList} aria-label="Updates on my requests" style="width:44px;height:44px;border-radius:22px;border:1px solid #2A4268;background:#13294B;display:flex;align-items:center;justify-content:center;position:relative;padding:0">
+            ${Icon(ICONS.bell, '#fff', 20, 2)}
+            ${v.hasUnread && html`<span style="position:absolute;top:9px;right:10px;width:10px;height:10px;border-radius:5px;background:#FFC72C;border:2px solid #13294B"></span>`}
+          </button>
+        </div>
+        <h1 class="disp" style="margin:4px 0 0;font-size:36px;line-height:1;font-weight:900;position:relative">What needs<br />fixing <span style="color:#FFC72C">today?</span></h1>
+        <button onClick=${v.openAgent} style="display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 8px 8px 16px;background:#fff;border:0;border-radius:20px;text-align:left;position:relative;box-shadow:0 10px 30px rgba(0,0,0,0.25)">
+          <span style="flex-grow:1">
+            <span style="display:block;font-size:12px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:#0B1F3A">City Agent</span>
+            <span style="display:block;font-size:15px;color:#4A5868;margin-top:2px">Describe it. We'll route it.</span>
+          </span>
+          <span style="width:46px;height:46px;border-radius:15px;background:#FFC72C;display:flex;align-items:center;justify-content:center;flex-shrink:0">${Icon(SPARK, '#0B1F3A', 22, 2.2)}</span>
+        </button>
+        <div style="display:flex;gap:8px;overflow-x:auto;margin:0 -20px;padding:0 20px;position:relative">
+          ${v.heroPrompts.map(p => html`<button onClick=${p.go} style="flex-shrink:0;min-height:40px;padding:0 14px;border-radius:999px;border:1px solid #2E4A75;background:#13294B;color:#fff;font-size:13px;font-weight:600;white-space:nowrap">“${p.text}”</button>`)}
+        </div>
+      </div>
+
+      <div style="padding:18px 20px 24px;display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;gap:8px">
+          <a href="tel:911" style="flex-grow:1;display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;border-radius:16px;background:#fff;border:2px solid #F3C7C1">
+            <span style="width:28px;height:28px;border-radius:9px;background:#B42318;display:flex;align-items:center;justify-content:center;flex-shrink:0">${Icon('M12 7v6M12 17h.01', '#fff', 16, 2.6)}</span>
+            <span style="font-size:13px;line-height:1.25"><strong style="display:block;color:#8F1D14">Life-threatening?</strong>Call 911</span>
+          </a>
+          <a href="tel:0000000000" style="display:flex;align-items:center;gap:8px;min-height:52px;padding:0 14px;border-radius:16px;background:#0B1F3A;color:#fff;font-size:13px;font-weight:700">${Icon(PHONE, '#FFC72C', 16, 2.2)}Call the City</a>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <h2 class="disp" style="margin:0;font-size:19px;font-weight:800">Report a problem</h2>
+            <button onClick=${v.goServices} style="border:0;background:transparent;padding:8px 0;font-size:13px;font-weight:800;color:#0B1F3A;text-decoration:underline;text-decoration-color:#FFC72C;text-decoration-thickness:3px;text-underline-offset:4px">All ${v.typeCount} types</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px">
+            ${v.topTypes.map(t => html`
+              <button onClick=${t.open} style="background:#fff;border:0;border-radius:20px;padding:14px 12px;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:14px;min-height:108px;box-sizing:border-box;text-align:left;box-shadow:0 1px 2px rgba(11,31,58,0.06)">
+                <span style="width:40px;height:40px;border-radius:13px;background:#FFF1C7;display:flex;align-items:center;justify-content:center">${Icon(t.icon, '#0B1F3A', 22, 1.9)}</span>
+                <span style="font-size:13px;font-weight:800;line-height:1.2">${t.name}</span>
+              </button>`)}
+          </div>
+        </div>
+
+        ${v.latest && html`
+          <button onClick=${v.latest.open} style="background:#0B1F3A;color:#fff;border:0;border-radius:22px;padding:18px;display:flex;flex-direction:column;gap:14px;text-align:left;position:relative;overflow:hidden">
+            <span aria-hidden="true" style="position:absolute;right:-24px;bottom:-40px;width:110px;height:110px;border-radius:55px;background:#FFC72C;opacity:0.12"></span>
+            <span style="display:flex;width:100%;justify-content:space-between;align-items:center">
+              <span style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#B9C4D4">Latest request · ${v.latest.id}</span>
+              <span style="font-size:12px;font-weight:800;color:#0B1F3A;background:#FFC72C;padding:5px 10px;border-radius:999px">${v.latest.statusLabel}</span>
+            </span>
+            <span style="display:block">
+              <span class="disp" style="display:block;font-size:20px;font-weight:800">${v.latest.title}</span>
+              <span style="display:block;font-size:13px;color:#B9C4D4;margin-top:3px">${v.latest.summary}</span>
+            </span>
+            <span style="display:grid;width:100%;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px">${v.latest.bars.map(b => html`<span style=${b.style}></span>`)}</span>
+          </button>`}
+
+        <div style="display:flex;gap:10px">
+          <button onClick=${v.openGarbageInfo} style="flex:1 1 0;background:#fff;border:0;border-radius:18px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px">
+            ${Icon(ICONS.calendar, '#0B1F3A', 20, 2)}
+            <span style="display:block;font-size:12px;color:#4A5868">Next garbage day</span>
+            <span class="disp" style="display:block;font-size:17px;font-weight:800">[Day]</span>
+          </button>
+          <button onClick=${v.openLeaves} style="flex:1 1 0;background:#fff;border:0;border-radius:18px;padding:14px;text-align:left;display:flex;flex-direction:column;gap:6px">
+            ${Icon(ICONS.leaf, '#0B1F3A', 20, 2)}
+            <span style="display:block;font-size:12px;color:#4A5868">Leaf pickup</span>
+            <span class="disp" style="display:block;font-size:17px;font-weight:800">Bagged only</span>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  agent(v) {
+    const optButtons = (m) => m.optList.map(o => html`<button onClick=${o.pick} disabled=${o.disabled} aria-pressed=${o.on} style=${o.style}>${o.label}</button>`);
+    const msg = (m) => {
+      if (m.kind === 'text') return html`<div style=${m.bubble}>${m.text}</div>`;
+      if (m.kind === 'route') return html`
+        <div style="background:#0B1F3A;color:#fff;border-radius:20px;padding:16px;width:290px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:40px;height:40px;border-radius:13px;background:#FFC72C;display:flex;align-items:center;justify-content:center;flex-shrink:0">${Icon(m.icon, '#0B1F3A', 22, 2)}</span>
+            <span>
+              <span style="display:block;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#FFC72C">Routing to</span>
+              <span class="disp" style="display:block;font-size:17px;font-weight:800">${m.dept}</span>
+            </span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#B9C4D4">
+            <span style="padding:4px 10px;border-radius:999px;background:#13294B;color:#fff;font-weight:700">${m.typeName}</span>
+            <span>${m.qcount} quick questions</span>
+          </div>
+        </div>`;
+      if (m.kind === 'choices') return html`
+        <div style="display:flex;flex-direction:column;gap:10px;max-width:320px">
+          <div style=${m.bubble}>${m.text}</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px">${optButtons(m)}</div>
+        </div>`;
+      if (m.kind === 'summary') return html`
+        <div style="background:#fff;border-radius:20px;padding:16px;width:300px;box-sizing:border-box;display:flex;flex-direction:column;gap:12px;box-shadow:0 2px 10px rgba(11,31,58,0.08)">
+          <div style="font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#4A5868">Ready to file</div>
+          <dl style="margin:0;display:flex;flex-direction:column;gap:8px">
+            ${m.lines.map(l => html`<div style="display:flex;gap:12px;font-size:14px"><dt style="width:78px;flex-shrink:0;color:#4A5868">${l.k}</dt><dd style="margin:0;font-weight:700">${l.v}</dd></div>`)}
+          </dl>
+          <div style="display:flex;gap:8px">${optButtons(m)}</div>
+        </div>`;
+      if (m.kind === 'filed') return html`
+        <div style="background:#FFC72C;color:#0B1F3A;border-radius:20px;padding:16px;width:290px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:36px;height:36px;border-radius:18px;background:#0B1F3A;display:flex;align-items:center;justify-content:center">${Icon(CHECK, '#FFC72C', 18, 3)}</span>
+            <span class="disp" style="font-size:18px;font-weight:900">Filed · ${m.reqId}</span>
+          </div>
+          <div style="font-size:14px;line-height:1.4">Sent to ${m.dept}. You'll get updates here as it moves.</div>
+          <button onClick=${m.track} style="min-height:46px;border-radius:14px;border:0;background:#0B1F3A;color:#fff;font-size:15px;font-weight:800">Track it</button>
+        </div>`;
+      if (m.kind === 'emergency') return html`
+        <div style="background:#B42318;color:#fff;border-radius:20px;padding:16px;width:300px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px">
+          <div class="disp" style="font-size:18px;font-weight:900">${m.title}</div>
+          <div style="font-size:14px;line-height:1.45">${m.text}</div>
+          <a href=${m.href} style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:14px;background:#fff;color:#8F1D14;font-size:16px;font-weight:900">${m.cta}</a>
+        </div>`;
+      if (m.kind === 'info') return html`
+        <div style="background:#fff;border-radius:20px;padding:16px;width:290px;box-sizing:border-box;display:flex;flex-direction:column;gap:10px;box-shadow:0 2px 10px rgba(11,31,58,0.08)">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span style="width:38px;height:38px;border-radius:12px;background:#FFF1C7;display:flex;align-items:center;justify-content:center">${Icon(m.icon, '#0B1F3A', 20, 2)}</span>
+            <span class="disp" style="font-size:16px;font-weight:800">${m.name}</span>
+          </div>
+          <div style="font-size:14px;line-height:1.45;color:#33404F">${m.long}</div>
+          <a href="#" style="display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:14px;background:#0B1F3A;color:#fff;font-size:15px;font-weight:800">${m.cta}</a>
+        </div>`;
+      return null;
+    };
+    return html`
+    <div style="background:#0B1F3A;color:#fff;padding:12px 16px 14px;display:flex;align-items:center;gap:12px;flex-shrink:0">
+      ${this.backBtn(v.goHome, 'Back to home')}
+      <div style="width:42px;height:42px;border-radius:14px;background:#FFC72C;display:flex;align-items:center;justify-content:center;flex-shrink:0">${Icon(SPARK, '#0B1F3A', 22, 2.2)}</div>
+      <div style="flex-grow:1;min-width:0">
+        <div class="disp" style="font-size:18px;font-weight:800;line-height:1.1">City Agent</div>
+        <div style="font-size:12px;color:#B9C4D4;margin-top:2px;display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#3DD68C"></span>Routes you to the right crew</div>
+      </div>
+      <button onClick=${v.resetChat} aria-label="Start a new conversation" style="width:44px;height:44px;border-radius:14px;border:1px solid #2A4268;background:#13294B;display:flex;align-items:center;justify-content:center;padding:0">${Icon('M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5', '#fff', 18, 2.2)}</button>
+    </div>
+    <div ref=${this.chatRef} style="flex-grow:1;overflow-y:auto;padding:18px 16px 12px;display:flex;flex-direction:column;gap:12px">
+      ${v.msgs.map(m => html`<div key=${m.id} class="rise" style=${m.rowStyle}>${msg(m)}</div>`)}
+      ${v.typing && html`<div role="status" aria-label="City Agent is typing" style="align-self:flex-start;background:#fff;border-radius:18px 18px 18px 6px;padding:14px 16px;display:flex;gap:5px"><span class="tdot"></span><span class="tdot"></span><span class="tdot"></span></div>`}
+    </div>
+    <div style="padding:10px 12px 20px;background:#fff;border-top:1px solid #E3E8EE;display:flex;gap:8px;align-items:center;flex-shrink:0">
+      <label style="flex-grow:1;display:flex;align-items:center;min-height:50px;padding:0 16px;border-radius:16px;background:#F2F4F7">
+        <span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Message the City Agent</span>
+        <input value=${v.draft} onInput=${v.onDraft} onKeyDown=${v.onDraftKey} placeholder="Describe the problem…" style="border:0;outline:0;background:transparent;font-size:16px;color:#0B1F3A;width:100%" />
+      </label>
+      <button onClick=${v.sendDraft} aria-label="Send" style="width:50px;height:50px;border-radius:16px;border:0;background:#FFC72C;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0">${Icon('M5 12h14M13 6l6 6-6 6', '#0B1F3A', 22, 2.4)}</button>
+    </div>`;
+  }
+
+  services(v) {
+    return html`
+    <div style="background:#0B1F3A;color:#fff;padding:14px 20px 18px;display:flex;flex-direction:column;gap:14px;border-radius:0 0 28px 28px;flex-shrink:0">
+      <div style="display:flex;align-items:center;gap:4px">
+        ${this.backBtn(v.goHome, 'Back')}
+        <h1 class="disp" style="margin:0;font-size:26px;font-weight:900">All services</h1>
+      </div>
+      <label style="display:flex;align-items:center;gap:10px;height:52px;padding:0 14px;background:#fff;border-radius:16px">
+        ${Icon('M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-3.5-3.5', '#4A5868', 20, 2)}
+        <input aria-label="Search services" placeholder="Try “light”, “trash”, “tree”" value=${v.q} onInput=${v.onQ} style="border:0;outline:0;font-size:16px;color:#0B1F3A;flex-grow:1;min-width:0;background:transparent" />
+        ${v.q && html`<button onClick=${v.clearQ} aria-label="Clear search" style="width:32px;height:32px;border:0;border-radius:16px;background:#E3E8EE;display:flex;align-items:center;justify-content:center;padding:0">${Icon('M6 6l12 12M18 6 6 18', '#0B1F3A', 14, 2.6)}</button>`}
+      </label>
+      <div style="display:flex;gap:8px;overflow-x:auto;margin:0 -20px;padding:0 20px">
+        ${v.cats.map(c => html`<button onClick=${c.pick} aria-pressed=${c.on} style=${c.style}>${c.label}</button>`)}
+      </div>
+    </div>
+    <div style="flex-grow:1;overflow-y:auto;padding:16px 20px 24px;display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:12px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:#4A5868">${v.resultLabel}</div>
+      ${v.lightTip && html`
+        <div style="display:flex;gap:10px;padding:12px 14px;background:#FFF1C7;border-radius:16px;font-size:13px;color:#4A3200;line-height:1.4">
+          <span style="flex-shrink:0;margin-top:1px">${Icon('M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 8v5M12 16h.01', '#4A3200', 18, 2.2)}</span>
+          <span><strong>4 or more streetlights out?</strong> That counts as an emergency. <a href="tel:0000000000" style="font-weight:800;text-decoration:underline">Call the City</a> instead.</span>
+        </div>`}
+      ${v.results.map(r => html`
+        <button onClick=${r.open} style="display:flex;width:100%;align-items:center;gap:12px;padding:14px;border:0;border-radius:18px;background:#fff;text-align:left">
+          <span style=${r.tile}>${Icon(r.icon, r.ink, 20, 1.9)}</span>
+          <span style="flex-grow:1;min-width:0">
+            <span style="display:block;font-size:15px;font-weight:800">${r.name}</span>
+            <span style="display:block;font-size:12px;color:#4A5868;margin-top:2px;line-height:1.35">${r.desc}</span>
+          </span>
+          <span style="flex-shrink:0">${Icon('m9 6 6 6-6 6', '#8592A1', 18, 2.2)}</span>
+        </button>`)}
+      ${!v.results.length && html`
+        <div style="padding:24px 16px;text-align:center;background:#fff;border-radius:18px">
+          <div class="disp" style="font-size:17px;font-weight:800">Nothing matches “${v.q}”</div>
+          <div style="font-size:13px;color:#4A5868;margin-top:6px">Describe it to the City Agent and it will find the right crew.</div>
+          <button onClick=${v.askAgentQ} style="margin-top:14px;min-height:46px;padding:0 18px;border-radius:14px;border:0;background:#FFC72C;font-size:14px;font-weight:800">Ask the City Agent</button>
+        </div>`}
+    </div>`;
+  }
+
+  form(v) {
+    const f = v.form;
+    const legendSub = 'font-family:\'Public Sans\',sans-serif;font-stretch:100%;font-size:13px;font-weight:600;color:#4A5868';
+    return html`
+    <div style="background:#0B1F3A;color:#fff;padding:12px 20px 20px;display:flex;flex-direction:column;gap:8px;border-radius:0 0 28px 28px;flex-shrink:0">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        ${this.backBtn(v.goBackFromForm, 'Back')}
+        <span style="font-size:12px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:#FFC72C">${f.cat}</span>
+        <button onClick=${v.goHome} style="border:0;background:transparent;font-size:14px;font-weight:700;color:#B9C4D4;padding:12px 0">Cancel</button>
+      </div>
+      <h1 class="disp" style="margin:0;font-size:28px;font-weight:900;line-height:1.05">${f.name}</h1>
+      <p style="margin:0;font-size:14px;color:#B9C4D4;line-height:1.4">${f.desc}</p>
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;margin-top:6px">${f.pbars.map(b => html`<span style=${b.style}></span>`)}</div>
+    </div>
+
+    <div style="flex-grow:1;overflow-y:auto;padding:18px 20px 20px;display:flex;flex-direction:column;gap:22px">
+      <div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:18px;padding:10px">
+        <div style="width:56px;height:56px;border-radius:14px;background:#DDE5D6;position:relative;overflow:hidden;flex-shrink:0">
+          <div style="position:absolute;left:0;right:0;top:23px;height:10px;background:#fff"></div>
+          <div style="position:absolute;top:0;bottom:0;left:23px;width:10px;background:#fff"></div>
+          <div style="position:absolute;left:20px;top:14px;width:16px;height:16px;border-radius:8px 8px 8px 0;transform:rotate(-45deg);background:#0B1F3A;border:2px solid #FFC72C"></div>
+        </div>
+        <div style="flex-grow:1;min-width:0">
+          <div style="font-size:15px;font-weight:800">${v.address}</div>
+          <div style="font-size:12px;color:#4A5868;margin-top:2px">${v.addressNote}</div>
+        </div>
+        <button onClick=${v.cycleAddress} style="border:0;background:#F2F4F7;border-radius:12px;font-size:13px;font-weight:800;padding:0 12px;min-height:40px">Change</button>
+      </div>
+
+      ${f.dupeText && html`
+        <div style="background:#FFF1C7;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="font-size:14px;line-height:1.45;color:#2B2200"><strong>Already reported nearby.</strong> ${f.dupeText}. Same problem? Follow that report and get its updates.</div>
+          <button onClick=${v.followDupe} style="align-self:flex-start;min-height:44px;padding:0 16px;border-radius:12px;border:0;background:#0B1F3A;color:#fff;font-size:14px;font-weight:800">Follow existing report</button>
+        </div>`}
+
+      ${f.fields.map(fd => html`
+        <fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px">
+          <legend class="disp" style="font-size:17px;font-weight:800;padding:0;margin-bottom:10px">${fd.label} <span style=${legendSub}>${fd.hint}</span></legend>
+          ${fd.isCorners ? html`
+            <div style="display:flex;gap:14px;align-items:center">
+              <div style="width:136px;height:136px;flex-shrink:0;border-radius:20px;background:#DDE5D6;position:relative;overflow:hidden">
+                <div style="position:absolute;left:0;right:0;top:48px;height:40px;background:#fff"></div>
+                <div style="position:absolute;top:0;bottom:0;left:48px;width:40px;background:#fff"></div>
+                <div style="position:absolute;left:0;right:0;top:67px;height:2px;background:repeating-linear-gradient(90deg,#FFC72C 0 8px,transparent 8px 14px)"></div>
+                ${fd.corners.map(c => html`<button onClick=${c.pick} aria-pressed=${c.on} aria-label=${c.label} style=${c.style}></button>`)}
+              </div>
+              <div style="font-size:13px;color:#33404F;line-height:1.45">${fd.cornerSummary}</div>
+            </div>` : html`
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              ${fd.opts.map(o => html`<button onClick=${o.pick} aria-pressed=${o.on} style=${o.style}>${o.label}</button>`)}
+            </div>`}
+          ${fd.warn && html`<div style=${fd.warnStyle}>${fd.warn}</div>`}
+        </fieldset>`)}
+
+      <label style="display:flex;flex-direction:column;gap:8px">
+        <span class="disp" style="font-size:17px;font-weight:800">Anything else? <span style=${legendSub}>Optional</span></span>
+        <textarea value=${v.note} onInput=${v.onNote} maxlength="600" rows="3" placeholder="Short details help the crew." style="resize:none;background:#fff;border:1px solid #D6DCE3;border-radius:14px;padding:12px;font-size:15px;color:#0B1F3A"></textarea>
+        <span style="font-size:12px;color:#4A5868;text-align:right">${v.note.length}/600</span>
+      </label>
+
+      <button onClick=${v.togglePhoto} style=${v.photoStyle}>
+        ${Icon('M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 'currentColor', 20, 2)}
+        ${v.photoLabel}
+      </button>
+
+      ${f.contact && html`
+        <fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px">
+          <legend class="disp" style="font-size:17px;font-weight:800;padding:0;margin-bottom:4px">Your contact info</legend>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700">Name
+            <input value=${v.name} onInput=${v.onName} autocomplete="name" style="height:50px;border:1px solid #D6DCE3;border-radius:14px;padding:0 12px;font-size:15px;background:#fff" /></label>
+          <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700">Phone
+            <input value=${v.phone} onInput=${v.onPhone} type="tel" autocomplete="tel" style="height:50px;border:1px solid #D6DCE3;border-radius:14px;padding:0 12px;font-size:15px;background:#fff" /></label>
+        </fieldset>`}
+
+      ${f.canPublic && html`
+        <button onClick=${v.togglePublic} role="switch" aria-checked=${v.isPublic} style="display:flex;align-items:center;gap:12px;background:#fff;border:0;border-radius:18px;padding:14px;text-align:left">
+          <span style="flex-grow:1">
+            <span style="display:block;font-size:15px;font-weight:800">Show on the public map</span>
+            <span style="display:block;font-size:12px;color:#4A5868;margin-top:2px">Neighbors can see and follow it. Your name is never shown.</span>
+          </span>
+          <span style=${v.switchTrack}><span style=${v.switchKnob}></span></span>
+        </button>`}
+      ${f.privateOnly && html`
+        <div style="font-size:13px;color:#4A5868;display:flex;gap:8px;align-items:center">
+          ${Icon('M5 11h14v10H5zM8 11V8a4 4 0 0 1 8 0v3', '#4A5868', 16, 2)}
+          This request type is always private.
+        </div>`}
+    </div>
+
+    <div style="padding:12px 20px 22px;background:#fff;border-top:1px solid #E3E8EE;display:flex;flex-direction:column;gap:8px;flex-shrink:0">
+      ${v.blocked ? html`
+        <a href=${v.blockHref} style="display:flex;align-items:center;justify-content:center;height:56px;border-radius:18px;background:#B42318;color:#fff;font-size:16px;font-weight:900">${v.blockLabel}</a>` : html`
+        <div style="font-size:12px;font-weight:600;color:#4A5868;text-align:center">${v.progressText}</div>
+        <button onClick=${v.submit} disabled=${v.notReady} style=${v.submitStyle}>Submit report</button>`}
+    </div>`;
+  }
+
+  info(v) {
+    return html`
+    <div style="background:#0B1F3A;color:#fff;padding:12px 20px 26px;display:flex;flex-direction:column;gap:14px;border-radius:0 0 28px 28px;flex-shrink:0">
+      ${this.backBtn(v.goServices, 'Back')}
+      <div style="width:56px;height:56px;border-radius:18px;background:#FFC72C;display:flex;align-items:center;justify-content:center">${Icon(v.info.icon, '#0B1F3A', 28, 1.9)}</div>
+      <h1 class="disp" style="margin:0;font-size:28px;font-weight:900;line-height:1.05">${v.info.name}</h1>
+    </div>
+    <div style="flex-grow:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px">
+      <p style="margin:0;font-size:16px;color:#33404F;line-height:1.55">${v.info.long}</p>
+      <a href="#" style="display:flex;align-items:center;justify-content:center;height:56px;border-radius:18px;background:#FFC72C;font-size:16px;font-weight:900">${v.info.cta}</a>
+      <p style="margin:0;font-size:12px;color:#4A5868;text-align:center">Opens outside the app</p>
+    </div>`;
+  }
+
+  track(v) {
+    const c = v.cur;
+    return html`
+    <div style="background:#0B1F3A;color:#fff;padding:12px 20px 24px;display:flex;flex-direction:column;gap:10px;border-radius:0 0 28px 28px;position:relative;overflow:hidden;flex-shrink:0">
+      <div aria-hidden="true" style="position:absolute;right:-60px;bottom:-80px;width:200px;height:200px;border-radius:100px;border:24px solid #FFC72C;opacity:0.14"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        ${this.backBtn(v.goList, 'Back to my requests')}
+        <span style="font-size:12px;font-weight:800;letter-spacing:0.8px;color:#B9C4D4">REQUEST ${c.id}</span>
+        <span style="width:44px"></span>
+      </div>
+      <span style="align-self:flex-start;font-size:12px;font-weight:800;color:#0B1F3A;background:#FFC72C;padding:5px 10px;border-radius:999px">${c.kicker}</span>
+      <h1 class="disp" style="margin:0;font-size:28px;font-weight:900;line-height:1.05;position:relative">${c.headline}</h1>
+      <div style="font-size:14px;color:#D3DAE5;line-height:1.4;position:relative">${c.title} · ${c.summary}</div>
+      <div style="font-size:13px;color:#B9C4D4;position:relative">${c.where}</div>
+    </div>
+    <div style="flex-grow:1;overflow-y:auto;padding:18px 20px 24px;display:flex;flex-direction:column;gap:16px">
+      <div style="background:#fff;border-radius:20px;padding:18px">
+        <h2 class="disp" style="margin:0 0 16px;font-size:17px;font-weight:800">Progress</h2>
+        <ol style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column">
+          ${c.steps.map(s => html`
+            <li style="display:flex;gap:14px">
+              <div style="display:flex;flex-direction:column;align-items:center;width:24px">
+                <div style=${s.dot}></div>
+                ${s.line && html`<div style=${s.lineStyle}></div>`}
+              </div>
+              <div style="padding-bottom:18px">
+                <div style=${s.titleStyle}>${s.t}</div>
+                <div style="font-size:13px;color:#4A5868;margin-top:2px">${s.d}</div>
+              </div>
+            </li>`)}
+        </ol>
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onClick=${c.toggleFollow} aria-pressed=${c.followed} style=${c.followStyle}>${c.followLabel}</button>
+        <button onClick=${v.goHome} style="flex:1 1 0;height:52px;border-radius:16px;border:0;background:#0B1F3A;color:#fff;font-size:15px;font-weight:800">Done</button>
+      </div>
+      ${c.canAdvance && html`<button onClick=${c.advance} style="border:1px dashed #A9B4C0;background:transparent;border-radius:14px;min-height:44px;font-size:13px;font-weight:700;color:#4A5868">Prototype: simulate next city update</button>`}
+    </div>`;
+  }
+
+  list(v) {
+    return html`
+    <div style="background:#0B1F3A;color:#fff;padding:22px 20px;border-radius:0 0 28px 28px;flex-shrink:0">
+      <h1 class="disp" style="margin:0;font-size:30px;font-weight:900">My requests</h1>
+      <div style="font-size:13px;color:#B9C4D4;margin-top:4px">${v.reqCountLabel}</div>
+    </div>
+    <div style="flex-grow:1;overflow-y:auto;padding:18px 20px 24px;display:flex;flex-direction:column;gap:10px">
+      ${v.reqCards.map(r => html`
+        <button onClick=${r.open} style="background:#fff;border:0;border-radius:20px;padding:16px;display:flex;flex-direction:column;gap:12px;text-align:left">
+          <span style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:8px">
+            <span class="disp" style="font-size:16px;font-weight:800">${r.title}</span>
+            <span style=${r.pill}>${r.statusLabel}</span>
+          </span>
+          <span style="display:block;font-size:13px;color:#4A5868">${r.summary} · ${r.id}</span>
+          <span style="display:grid;width:100%;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px">${r.bars.map(b => html`<span style=${b.style2}></span>`)}</span>
+        </button>`)}
+    </div>`;
+  }
+
+  tabs(v) {
+    return html`
+    <nav aria-label="Main" style="display:flex;justify-content:space-around;align-items:center;height:78px;background:#fff;border-top:1px solid #E3E8EE;padding-bottom:10px;box-sizing:border-box;flex-shrink:0">
+      <button onClick=${v.goHome} style=${v.tab.home}>${Icon('M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', 'currentColor', 22, 2.1)}Home</button>
+      <button onClick=${v.goServices} style=${v.tab.services}>${Icon('M4.5 3h4A1.5 1.5 0 0 1 10 4.5v4A1.5 1.5 0 0 1 8.5 10h-4A1.5 1.5 0 0 1 3 8.5v-4A1.5 1.5 0 0 1 4.5 3zM15.5 3h4A1.5 1.5 0 0 1 21 4.5v4a1.5 1.5 0 0 1-1.5 1.5h-4A1.5 1.5 0 0 1 14 8.5v-4A1.5 1.5 0 0 1 15.5 3zM4.5 14h4a1.5 1.5 0 0 1 1.5 1.5v4A1.5 1.5 0 0 1 8.5 21h-4A1.5 1.5 0 0 1 3 19.5v-4A1.5 1.5 0 0 1 4.5 14zM15.5 14h4a1.5 1.5 0 0 1 1.5 1.5v4a1.5 1.5 0 0 1-1.5 1.5h-4a1.5 1.5 0 0 1-1.5-1.5v-4a1.5 1.5 0 0 1 1.5-1.5z', 'currentColor', 22, 2.1)}Services</button>
+      <button onClick=${v.openAgent} aria-label="City Agent" style="width:52px;height:52px;border-radius:17px;border:0;background:#FFC72C;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(11,31,58,0.18);padding:0;flex-shrink:0">${Icon(SPARK, '#0B1F3A', 26, 2.2)}</button>
+      <button onClick=${v.goList} style=${v.tab.list}>${Icon('M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01', 'currentColor', 22, 2.1)}Requests</button>
+      <a href="tel:0000000000" style=${v.tab.call}>${Icon(PHONE, 'currentColor', 22, 2.1)}Call</a>
+    </nav>`;
+  }
+
+  render() {
+    const v = this.vals();
+    const screens = { home: this.home, agent: this.agent, services: this.services, form: this.form, info: this.info, track: this.track, list: this.list };
+    return html`
+    <div style="width:100%;height:100%;box-sizing:border-box;background:#F2F4F7;color:#0B1F3A;font-family:'Public Sans',sans-serif;display:flex;flex-direction:column;overflow:hidden;position:relative">
+      ${screens[v.sc].call(this, v)}
+      ${v.showTabs && this.tabs(v)}
+      ${v.toast && html`
+        <div role="status" class="rise" style="position:absolute;left:16px;right:16px;top:14px;background:#FFC72C;color:#0B1F3A;border-radius:16px;padding:14px 16px;font-size:14px;font-weight:800;box-shadow:0 10px 28px rgba(11,31,58,0.3);display:flex;gap:10px;align-items:center">${Icon(CHECK, '#0B1F3A', 18, 3)}${v.toast}</div>`}
+    </div>`;
+  }
+}
+
+render(html`<${App} />`, document.getElementById('app'));
+</script>
+</body>
+</html>
